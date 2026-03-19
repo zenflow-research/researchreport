@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Research Report Mapper</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #242734;
+  --border: #2e3140;
+  --text: #e4e6ed;
+  --text2: #8b8fa3;
+  --accent: #6c8cff;
+  --accent2: #4a6cf7;
+  --green: #34d399;
+  --red: #f87171;
+  --yellow: #fbbf24;
+  --orange: #fb923c;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.5;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.app { max-width: 1400px; margin: 0 auto; padding: 16px; }
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 0; border-bottom: 1px solid var(--border); margin-bottom: 20px;
+}
+.header h1 { font-size: 22px; font-weight: 600; }
+.header .stats-bar { display: flex; gap: 20px; font-size: 13px; color: var(--text2); }
+.header .stats-bar .num { color: var(--accent); font-weight: 600; font-size: 15px; }
+
+.tabs {
+  display: flex; gap: 4px; margin-bottom: 20px;
+  border-bottom: 1px solid var(--border); padding-bottom: 0;
+}
+.tab {
+  padding: 8px 16px; cursor: pointer; border: none; background: none;
+  color: var(--text2); font-size: 14px; border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px; margin-bottom: 16px;
+}
+.card h3 { font-size: 14px; color: var(--text2); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.stat-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+.stat-box {
+  background: var(--surface2); border-radius: 6px; padding: 14px;
+  text-align: center;
+}
+.stat-box .val { font-size: 28px; font-weight: 700; color: var(--accent); }
+.stat-box .label { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+.search-bar {
+  display: flex; gap: 8px; margin-bottom: 16px;
+}
+.search-bar input, .search-bar select {
+  padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); font-size: 14px; outline: none;
+}
+.search-bar input { flex: 1; }
+.search-bar input:focus { border-color: var(--accent); }
+.search-bar select { min-width: 140px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th {
+  text-align: left; padding: 8px 10px; background: var(--surface2);
+  color: var(--text2); font-weight: 500; font-size: 12px;
+  text-transform: uppercase; letter-spacing: 0.3px;
+  position: sticky; top: 0;
+}
+td { padding: 8px 10px; border-top: 1px solid var(--border); }
+tr:hover td { background: var(--surface2); }
+tr.clickable { cursor: pointer; }
+
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 11px; font-weight: 500;
+}
+.badge-green { background: #064e3b; color: var(--green); }
+.badge-blue { background: #1e3a5f; color: #60a5fa; }
+.badge-yellow { background: #422006; color: var(--yellow); }
+.badge-red { background: #450a0a; color: var(--red); }
+.badge-gray { background: #1f2937; color: var(--text2); }
+.badge-orange { background: #431407; color: var(--orange); }
+
+.score-bar {
+  width: 60px; height: 6px; background: var(--surface2); border-radius: 3px;
+  display: inline-block; vertical-align: middle; margin-right: 6px;
+}
+.score-bar-fill { height: 100%; border-radius: 3px; }
+
+.pagination {
+  display: flex; justify-content: center; gap: 8px; margin-top: 16px;
+}
+.pagination button {
+  padding: 6px 14px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 4px; color: var(--text); cursor: pointer; font-size: 13px;
+}
+.pagination button:hover { background: var(--accent2); }
+.pagination button:disabled { opacity: 0.3; cursor: default; }
+.pagination span { padding: 6px 8px; color: var(--text2); font-size: 13px; }
+
+.bar-chart { display: flex; flex-direction: column; gap: 4px; }
+.bar-row { display: flex; align-items: center; gap: 8px; }
+.bar-label { width: 160px; font-size: 12px; color: var(--text2); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar { height: 18px; background: var(--accent2); border-radius: 3px; min-width: 2px; transition: width 0.3s; }
+.bar-val { font-size: 12px; color: var(--text2); min-width: 40px; }
+
+.back-btn {
+  padding: 4px 12px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 4px; color: var(--text2); cursor: pointer; font-size: 13px;
+  margin-bottom: 12px; display: inline-block;
+}
+.back-btn:hover { color: var(--text); background: var(--border); }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+.loading { text-align: center; padding: 40px; color: var(--text2); }
+
+/* Upgrade progress panel */
+.upgrade-panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px; margin-bottom: 16px;
+}
+.upgrade-panel.running { border-color: var(--accent); }
+.upgrade-panel.completed { border-color: var(--green); }
+.upgrade-panel.error { border-color: var(--red); }
+.upgrade-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.upgrade-header h3 { font-size: 14px; margin: 0; }
+.upgrade-btn {
+  padding: 6px 16px; border: none; border-radius: 6px;
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+}
+.upgrade-btn-start { background: var(--accent2); color: white; }
+.upgrade-btn-start:hover { background: var(--accent); }
+.upgrade-btn-stop { background: #7f1d1d; color: var(--red); }
+.upgrade-btn-stop:hover { background: #991b1b; }
+.progress-bar-container {
+  width: 100%; height: 20px; background: var(--surface2);
+  border-radius: 10px; overflow: hidden; margin-bottom: 10px;
+}
+.progress-bar-fill {
+  height: 100%; border-radius: 10px;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  transition: width 0.5s ease;
+}
+.progress-bar-fill.completed { background: linear-gradient(90deg, #059669, var(--green)); }
+.progress-stats {
+  display: flex; gap: 20px; font-size: 12px; color: var(--text2); margin-bottom: 10px;
+}
+.progress-stats .num { color: var(--text); font-weight: 600; }
+.recent-files { font-size: 12px; color: var(--text2); max-height: 140px; overflow-y: auto; }
+.recent-file { padding: 2px 0; display: flex; gap: 8px; align-items: center; }
+.recent-file .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.recent-file .dot.matched { background: var(--green); }
+.recent-file .dot.unmatched { background: var(--text2); }
+.recent-file .fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.recent-file .company { color: var(--green); font-weight: 500; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+function useFetch(url) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    setLoading(true);
+    fetch(url).then(r => r.json()).then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [url]);
+  return { data, loading };
+}
+
+function Badge({ type }) {
+  const map = {
+    company_specific: ['Company', 'badge-blue'],
+    sector_report: ['Sector', 'badge-orange'],
+    daily_update: ['Daily', 'badge-gray'],
+    earnings_preview: ['Earnings', 'badge-yellow'],
+    market_overview: ['Market', 'badge-gray'],
+    ipo_note: ['IPO', 'badge-green'],
+    book: ['Book', 'badge-gray'],
+    thematic: ['Theme', 'badge-yellow'],
+  };
+  const [label, cls] = map[type] || [type || '?', 'badge-gray'];
+  return <span className={`badge ${cls}`}>{label}</span>;
+}
+
+function ScoreBar({ score }) {
+  const color = score >= 95 ? 'var(--green)' : score >= 85 ? 'var(--accent)' : 'var(--yellow)';
+  return (
+    <span>
+      <span className="score-bar">
+        <span className="score-bar-fill" style={{ width: `${score}%`, background: color }}/>
+      </span>
+      {Math.round(score)}
+    </span>
+  );
+}
+
+function BarChart({ data, labelKey, valueKey, maxBars = 15, onBarClick }) {
+  if (!data || !data.length) return null;
+  const items = data.slice(0, maxBars);
+  const maxVal = Math.max(...items.map(d => d[valueKey]));
+  return (
+    <div className="bar-chart">
+      {items.map((d, i) => (
+        <div key={i} className="bar-row" style={{ cursor: onBarClick ? 'pointer' : 'default' }}
+             onClick={() => onBarClick && onBarClick(d)}>
+          <span className="bar-label" title={d[labelKey]}>{d[labelKey] || '(none)'}</span>
+          <span className="bar" style={{ width: `${(d[valueKey] / maxVal) * 100}%` }}/>
+          <span className="bar-val">{d[valueKey].toLocaleString()}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ---- Open PDF file ----
+function openFile(filepath, e) {
+  if (e) e.stopPropagation();
+  if (!filepath) return;
+  fetch('/api/open-file', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({filepath}),
+  });
+}
+
+// ---- Upgrade Panel ----
+function UpgradePanel() {
+  const [progress, setProgress] = useState(null);
+  const [polling, setPolling] = useState(true);
+
+  // Poll upgrade status every 2 seconds
+  useEffect(() => {
+    if (!polling) return;
+    const poll = () => {
+      fetch('/api/upgrade/status').then(r => r.json()).then(d => {
+        setProgress(d);
+        // Stop polling if completed/error/idle
+        if (d.status === 'completed' || d.status === 'error') {
+          // Keep polling a bit slower after completion
+        }
+      }).catch(() => {});
+    };
+    poll();
+    const id = setInterval(poll, 2000);
+    return () => clearInterval(id);
+  }, [polling]);
+
+  const startUpgrade = () => {
+    fetch('/api/upgrade/start', { method: 'POST' })
+      .then(r => r.json())
+      .then(() => setPolling(true));
+  };
+
+  const stopUpgrade = () => {
+    fetch('/api/upgrade/stop', { method: 'POST' })
+      .then(r => r.json());
+  };
+
+  const formatEta = (seconds) => {
+    if (!seconds || seconds <= 0) return '--';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  };
+
+  const formatElapsed = (seconds) => {
+    if (!seconds) return '';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  };
+
+  const status = progress?.status || 'idle';
+  const pct = progress?.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0;
+
+  return (
+    <div className={`upgrade-panel ${status}`}>
+      <div className="upgrade-header">
+        <h3 style={{color: status === 'running' ? 'var(--accent)' : status === 'completed' ? 'var(--green)' : status === 'error' ? 'var(--red)' : 'var(--text2)'}}>
+          Ollama Level 2 Upgrade
+          {status === 'running' && <span style={{fontSize:11, marginLeft:8, color:'var(--text2)'}}>qwen2.5:14b</span>}
+          {status === 'completed' && <span style={{fontSize:11, marginLeft:8, color:'var(--green)'}}>Done!</span>}
+          {status === 'error' && <span style={{fontSize:11, marginLeft:8, color:'var(--red)'}}>Error</span>}
+        </h3>
+        <div style={{display:'flex', gap:8}}>
+          {(status === 'idle' || status === 'completed' || status === 'error') && (
+            <button className="upgrade-btn upgrade-btn-start" onClick={startUpgrade}>
+              {status === 'completed' ? 'Re-run Upgrade' : 'Start Upgrade'}
+            </button>
+          )}
+          {status === 'running' && (
+            <button className="upgrade-btn upgrade-btn-stop" onClick={stopUpgrade}>Stop</button>
+          )}
+        </div>
+      </div>
+
+      {(status === 'running' || status === 'completed') && progress?.total > 0 && (
+        <>
+          <div className="progress-bar-container">
+            <div className={`progress-bar-fill ${status === 'completed' ? 'completed' : ''}`}
+                 style={{width: `${pct}%`}} />
+          </div>
+          <div className="progress-stats">
+            <span><span className="num">{progress.processed?.toLocaleString()}</span> / {progress.total?.toLocaleString()} ({pct}%)</span>
+            <span><span className="num" style={{color:'var(--green)'}}>{progress.mapped?.toLocaleString()}</span> mapped</span>
+            <span><span className="num">{progress.unmapped?.toLocaleString()}</span> unmapped</span>
+            <span><span className="num" style={{color:'var(--red)'}}>{progress.errors?.toLocaleString()}</span> errors</span>
+            {status === 'running' && <span>{progress.rate} files/sec</span>}
+            {status === 'running' && <span>ETA: {formatEta(progress.eta_seconds)}</span>}
+            {status === 'completed' && progress.elapsed_seconds && <span>Took {formatElapsed(progress.elapsed_seconds)}</span>}
+          </div>
+
+          {progress.recent_files?.length > 0 && (
+            <div className="recent-files">
+              {[...progress.recent_files].reverse().map((f, i) => (
+                <div key={i} className="recent-file">
+                  <span className={`dot ${f.matched ? 'matched' : 'unmatched'}`}/>
+                  <span className="fname" title={f.filename}>{f.filename}</span>
+                  {f.report_date && <span style={{color:'var(--yellow)', fontSize:11, flexShrink:0}}>{f.report_date}</span>}
+                  {f.broker && <span style={{color:'var(--text2)', fontSize:11, flexShrink:0}}>{f.broker}</span>}
+                  {f.company && <span className="company">{f.company}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {status === 'error' && progress?.error && (
+        <div style={{fontSize:12, color:'var(--red)', marginTop:8}}>{progress.error}</div>
+      )}
+    </div>
+  );
+}
+
+// ---- Dashboard Tab ----
+function Dashboard({ onNav, showDupes }) {
+  const ds = showDupes ? '?show_dupes=1' : '';
+  const { data: stats, loading } = useFetch('/api/stats' + ds);
+  if (loading || !stats) return <div className="loading">Loading...</div>;
+  return (
+    <div>
+      <UpgradePanel />
+      <div className="stat-grid">
+        <div className="stat-box"><div className="val">{stats.total.toLocaleString()}</div><div className="label">Total Reports</div></div>
+        <div className="stat-box"><div className="val" style={{color:'var(--green)'}}>{stats.mapped.toLocaleString()}</div><div className="label">Mapped ({stats.mapped_pct}%)</div></div>
+        <div className="stat-box"><div className="val" style={{color:'var(--red)'}}>{stats.unmapped.toLocaleString()}</div><div className="label">Unmapped</div></div>
+        <div className="stat-box"><div className="val">{stats.by_level[1]?.toLocaleString() || 0}</div><div className="label">Level 1 (Filename)</div></div>
+        <div className="stat-box"><div className="val">{stats.by_level[2]?.toLocaleString() || 0}</div><div className="label">Level 2 (Ollama)</div></div>
+        <div className="stat-box"><div className="val">{stats.by_level[3]?.toLocaleString() || 0}</div><div className="label">Level 3 (Claude)</div></div>
+      </div>
+
+      <div className="two-col" style={{marginTop: 16}}>
+        <div className="card">
+          <h3>Top Brokers</h3>
+          <BarChart data={stats.by_broker} labelKey="broker" valueKey="count"
+                    onBarClick={d => onNav('reports', {broker: d.broker})} />
+        </div>
+        <div className="card">
+          <h3>By Sector</h3>
+          <BarChart data={stats.by_sector} labelKey="sector" valueKey="count"
+                    onBarClick={d => onNav('sectors', {sector: d.sector})} />
+        </div>
+      </div>
+
+      <div className="two-col">
+        <div className="card">
+          <h3>By Report Type</h3>
+          <BarChart data={stats.by_type} labelKey="report_type" valueKey="count" />
+        </div>
+        <div className="card">
+          <h3>By Match Method</h3>
+          <BarChart data={stats.by_method} labelKey="match_method" valueKey="count" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---- Companies Tab ----
+function Companies({ onNav, showDupes }) {
+  const [q, setQ] = useState('');
+  const [search, setSearch] = useState('');
+  const ds = showDupes ? '&show_dupes=1' : '';
+  const { data, loading } = useFetch(`/api/companies?q=${encodeURIComponent(search)}&limit=100${ds}`);
+
+  return (
+    <div>
+      <div className="search-bar">
+        <input placeholder="Search company, ticker, sector..." value={q}
+               onChange={e => setQ(e.target.value)}
+               onKeyDown={e => e.key === 'Enter' && setSearch(q)} />
+        <button className="back-btn" onClick={() => setSearch(q)}>Search</button>
+      </div>
+      {loading ? <div className="loading">Loading...</div> : (
+        <table>
+          <thead><tr>
+            <th>Company</th><th>Ticker</th><th>Sector</th><th>Industry</th><th>Reports</th>
+          </tr></thead>
+          <tbody>
+            {data && data.map(c => (
+              <tr key={c.data_company_id} className="clickable"
+                  onClick={() => onNav('company', {id: c.data_company_id})}>
+                <td style={{fontWeight:500}}>{c.company_name}</td>
+                <td><span className="badge badge-blue">{c.nse_code || c.bse_code || '-'}</span></td>
+                <td style={{color:'var(--text2)'}}>{c.sector || '-'}</td>
+                <td style={{color:'var(--text2)', fontSize: 12}}>{c.basic_industry || c.industry || '-'}</td>
+                <td><strong>{c.report_count}</strong></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+// ---- Company Detail ----
+function CompanyDetail({ companyId, onNav }) {
+  const [page, setPage] = useState(0);
+  const limit = 50;
+  const { data, loading } = useFetch(`/api/company/${companyId}/reports?limit=${limit}&offset=${page * limit}`);
+
+  if (loading || !data) return <div className="loading">Loading...</div>;
+  const co = data.company;
+
+  return (
+    <div>
+      <button className="back-btn" onClick={() => onNav('companies')}>Back to Companies</button>
+      <div className="card" style={{marginBottom:16}}>
+        <div style={{display:'flex', gap:16, alignItems:'center'}}>
+          <h2 style={{fontSize:20}}>{co?.company_name}</h2>
+          {co?.nse_code && <span className="badge badge-blue">{co.nse_code}</span>}
+          {co?.sector && <span className="badge badge-orange">{co.sector}</span>}
+        </div>
+        <div style={{color:'var(--text2)', fontSize:13, marginTop:4}}>
+          {co?.industry} &middot; {co?.basic_industry} &middot; DataCompanyID: {co?.data_company_id} &middot; {data.total} reports
+        </div>
+      </div>
+
+      <table>
+        <thead><tr>
+          <th>Filename</th><th>Broker</th><th>Type</th><th>Date</th><th>Score</th><th>Method</th><th>Level</th>
+        </tr></thead>
+        <tbody>
+          {data.reports.map(r => (
+            <tr key={r.id}>
+              <td style={{maxWidth:350, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', cursor: r.filepath ? 'pointer' : 'default', color: r.filepath ? 'var(--accent)' : 'var(--text)'}}
+                  title={r.filename} onClick={(e) => r.filepath && openFile(r.filepath, e)}>{r.filename}</td>
+              <td>{r.broker || '-'}</td>
+              <td><Badge type={r.report_type}/></td>
+              <td style={{fontSize:11, color:'var(--text2)', whiteSpace:'nowrap'}}>{r.report_date || '-'}</td>
+              <td><ScoreBar score={r.match_score}/></td>
+              <td style={{fontSize:11, color:'var(--text2)'}}>{r.match_method}</td>
+              <td>L{r.mapping_level}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="pagination">
+        <button disabled={page === 0} onClick={() => setPage(p => p - 1)}>Prev</button>
+        <span>{page * limit + 1}-{Math.min((page + 1) * limit, data.total)} of {data.total}</span>
+        <button disabled={(page + 1) * limit >= data.total} onClick={() => setPage(p => p + 1)}>Next</button>
+      </div>
+    </div>
+  );
+}
+
+// ---- Reports Tab ----
+function Reports({ initFilters = {}, onNav, showDupes }) {
+  const [q, setQ] = useState(initFilters.q || '');
+  const [broker, setBroker] = useState(initFilters.broker || '');
+  const [type, setType] = useState('');
+  const [mapped, setMapped] = useState('');
+  const [page, setPage] = useState(0);
+  const limit = 50;
+
+  const ds = showDupes ? '&show_dupes=1' : '';
+  const url = `/api/reports?q=${encodeURIComponent(q)}&broker=${encodeURIComponent(broker)}&type=${type}&mapped=${mapped}&limit=${limit}&offset=${page * limit}${ds}`;
+  const { data, loading } = useFetch(url);
+
+  return (
+    <div>
+      <div className="search-bar">
+        <input placeholder="Search filename..." value={q}
+               onChange={e => { setQ(e.target.value); setPage(0); }} />
+        <input placeholder="Broker..." value={broker} style={{maxWidth:180}}
+               onChange={e => { setBroker(e.target.value); setPage(0); }} />
+        <select value={type} onChange={e => { setType(e.target.value); setPage(0); }}>
+          <option value="">All Types</option>
+          <option value="company_specific">Company</option>
+          <option value="sector_report">Sector</option>
+          <option value="daily_update">Daily</option>
+          <option value="earnings_preview">Earnings</option>
+          <option value="market_overview">Market</option>
+          <option value="ipo_note">IPO</option>
+          <option value="book">Book</option>
+          <option value="unknown">Unknown</option>
+        </select>
+        <select value={mapped} onChange={e => { setMapped(e.target.value); setPage(0); }}>
+          <option value="">All</option>
+          <option value="yes">Mapped</option>
+          <option value="no">Unmapped</option>
+        </select>
+      </div>
+
+      {loading ? <div className="loading">Loading...</div> : (
+        <>
+          <div style={{fontSize:13, color:'var(--text2)', marginBottom:8}}>{data?.total?.toLocaleString()} reports</div>
+          <table>
+            <thead><tr>
+              <th>Filename</th><th>Broker</th><th>Type</th><th>Date</th><th>Company</th><th>Ticker</th><th>Sector</th><th>Score</th>
+            </tr></thead>
+            <tbody>
+              {data?.reports?.map(r => (
+                <tr key={r.id} className={r.data_company_id ? 'clickable' : ''}
+                    onClick={() => r.data_company_id && onNav('company', {id: r.data_company_id})}>
+                  <td style={{maxWidth:280, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', cursor: r.filepath ? 'pointer' : 'default', color: r.filepath ? 'var(--accent)' : 'var(--text)'}}
+                      title={r.filename} onClick={(e) => r.filepath && openFile(r.filepath, e)}>{r.filename}</td>
+                  <td style={{fontSize:12}}>{r.broker || '-'}</td>
+                  <td><Badge type={r.report_type}/></td>
+                  <td style={{fontSize:11, color:'var(--text2)', whiteSpace:'nowrap'}}>{r.report_date || '-'}</td>
+                  <td style={{fontWeight: r.company_name ? 500 : 400, color: r.company_name ? 'var(--text)' : 'var(--text2)'}}>
+                    {r.company_name || r.raw_company_text || '-'}
+                  </td>
+                  <td>{r.nse_code ? <span className="badge badge-blue">{r.nse_code}</span> : '-'}</td>
+                  <td style={{color:'var(--text2)', fontSize:12}}>{r.sector || '-'}</td>
+                  <td>{r.match_score ? <ScoreBar score={r.match_score}/> : '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="pagination">
+            <button disabled={page === 0} onClick={() => setPage(p => p - 1)}>Prev</button>
+            <span>{page * limit + 1}-{Math.min((page + 1) * limit, data?.total || 0)} of {data?.total?.toLocaleString()}</span>
+            <button disabled={(page + 1) * limit >= (data?.total || 0)} onClick={() => setPage(p => p + 1)}>Next</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ---- Sectors Tab ----
+function Sectors({ initSector, onNav }) {
+  const { data: sectors, loading } = useFetch('/api/sectors');
+  const [selected, setSelected] = useState(initSector || null);
+  const { data: detail } = useFetch(selected ? `/api/sector/${encodeURIComponent(selected)}` : '/api/sectors?x=0');
+
+  if (loading) return <div className="loading">Loading...</div>;
+
+  if (selected) {
+    return (
+      <div>
+        <button className="back-btn" onClick={() => setSelected(null)}>Back to Sectors</button>
+        <h2 style={{fontSize:18, marginBottom:12}}>{selected}</h2>
+        <table>
+          <thead><tr>
+            <th>Company</th><th>Ticker</th><th>Industry</th><th>Reports</th>
+          </tr></thead>
+          <tbody>
+            {detail && Array.isArray(detail) && detail.map(c => (
+              <tr key={c.data_company_id} className="clickable"
+                  onClick={() => onNav('company', {id: c.data_company_id})}>
+                <td style={{fontWeight:500}}>{c.company_name}</td>
+                <td><span className="badge badge-blue">{c.nse_code || '-'}</span></td>
+                <td style={{color:'var(--text2)', fontSize:12}}>{c.basic_industry || c.industry || '-'}</td>
+                <td><strong>{c.report_count}</strong></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  return (
+    <table>
+      <thead><tr>
+        <th>Sector</th><th>Companies</th><th>Reports</th>
+      </tr></thead>
+      <tbody>
+        {sectors && sectors.map(s => (
+          <tr key={s.sector} className="clickable" onClick={() => setSelected(s.sector)}>
+            <td style={{fontWeight:500}}>{s.sector}</td>
+            <td>{s.company_count}</td>
+            <td><strong>{s.report_count}</strong></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+// ---- Brokers Tab ----
+function Brokers({ onNav }) {
+  const { data, loading } = useFetch('/api/brokers');
+  if (loading) return <div className="loading">Loading...</div>;
+  return (
+    <table>
+      <thead><tr>
+        <th>Broker</th><th>Total Reports</th><th>Mapped</th><th>Map %</th><th>Companies Covered</th>
+      </tr></thead>
+      <tbody>
+        {data && data.map(b => (
+          <tr key={b.broker} className="clickable"
+              onClick={() => onNav('reports', {broker: b.broker})}>
+            <td style={{fontWeight:500}}>{b.broker}</td>
+            <td>{b.total}</td>
+            <td style={{color:'var(--green)'}}>{b.mapped}</td>
+            <td>{b.total > 0 ? Math.round(100 * b.mapped / b.total) : 0}%</td>
+            <td>{b.companies_covered}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+// ---- Main App ----
+function App() {
+  const [tab, setTab] = useState('dashboard');
+  const [navState, setNavState] = useState({});
+  const [showDupes, setShowDupes] = useState(false);
+  const dupeSuffix = showDupes ? '?show_dupes=1' : '';
+  const { data: stats } = useFetch('/api/stats' + dupeSuffix);
+
+  const onNav = useCallback((target, params = {}) => {
+    setNavState(params);
+    setTab(target);
+  }, []);
+
+  const renderTab = () => {
+    switch (tab) {
+      case 'dashboard': return <Dashboard onNav={onNav} showDupes={showDupes} />;
+      case 'companies': return <Companies onNav={onNav} showDupes={showDupes} />;
+      case 'company': return <CompanyDetail companyId={navState.id} onNav={onNav} showDupes={showDupes} />;
+      case 'reports': return <Reports initFilters={navState} onNav={onNav} showDupes={showDupes} />;
+      case 'sectors': return <Sectors initSector={navState.sector} onNav={onNav} showDupes={showDupes} />;
+      case 'brokers': return <Brokers onNav={onNav} showDupes={showDupes} />;
+      default: return <Dashboard onNav={onNav} showDupes={showDupes} />;
+    }
+  };
+
+  return (
+    <div className="app">
+      <div className="header">
+        <h1>Research Report Mapper</h1>
+        {stats && (
+          <div className="stats-bar">
+            <span><span className="num">{stats.total?.toLocaleString()}</span> unique</span>
+            <span><span className="num" style={{color:'var(--green)'}}>{stats.mapped?.toLocaleString()}</span> mapped ({stats.mapped_pct}%)</span>
+            <span><span className="num" style={{color:'var(--red)'}}>{stats.unmapped?.toLocaleString()}</span> unmapped</span>
+            {stats.duplicates > 0 && <span><span className="num" style={{color:'var(--yellow)'}}>{stats.duplicates?.toLocaleString()}</span> dupes</span>}
+            <label style={{cursor:'pointer', fontSize:12, display:'flex', alignItems:'center', gap:4}}>
+              <input type="checkbox" checked={showDupes} onChange={e => setShowDupes(e.target.checked)} />
+              Show dupes
+            </label>
+          </div>
+        )}
+      </div>
+
+      <div className="tabs">
+        {['dashboard','companies','reports','sectors','brokers'].map(t => (
+          <button key={t} className={`tab ${tab === t ? 'active' : ''}`}
+                  onClick={() => { setTab(t); setNavState({}); }}>
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {renderTab()}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

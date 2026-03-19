@@ -1,0 +1,148 @@
+# Research Report Mapper Configuration
+# Maps downloaded Telegram research reports to companies in G:/brain
+
+paths:
+  # Source: downloaded research reports
+  download_dir: "F:/2_Telegram_Download"
+  # Target: brain company master data
+  brain_dir: "G:/brain"
+  master_csv: "G:/brain/screener_util/company_sector_mapping_merged_master.csv"
+  screener_db: "G:/brain/data/screener_cloud.db"
+  # Output
+  output_dir: "G:/Telegram/research_mapper/output"
+  mapping_db: "G:/Telegram/research_mapper/output/report_mapping.db"
+
+# Known broker names - used to strip broker prefix from filenames
+brokers:
+  - ICICI Direct
+  - ICICI Securities
+  - HDFC Securities
+  - Motilal Oswal
+  - Kotak
+  - Sharekhan
+  - Geojit
+  - Jefferies
+  - Nuvama
+  - LKP Securities
+  - Axis Securities
+  - IIFL Securities
+  - SBI Securities
+  - HEM Securities
+  - Dolat Capital
+  - Prabhudas Lilladher
+  - Equirus Securities
+  - JM Financial
+  - Phillip Capital
+  - Phillips Capital
+  - Yes Securities
+  - Antique
+  - Choice Equities
+  - Nirmal Bang
+  - DRChoksey
+  - KR Choksey
+  - Spark Institutional
+  - Ventura
+  - B&K Securities
+  - IDBI Capital
+  - Mirae Asset
+  - Edelweiss
+  - Centrum
+  - Morgan Stanley
+  - Deutsche Bank
+  - Systematix
+  - Goldman Sachs
+  - CLSA
+  - Nomura
+  - UBS
+  - BofA Securities
+  - Citi
+  - JP Morgan
+  - Credit Suisse
+  - Emkay
+  - Anand Rathi
+  - BOB Capital
+  - HSBC
+  - Investec
+  - Macquarie
+  - Ambit Capital
+  - DAM Capital
+  - Elara Capital
+  - InCred
+  - SBICAP Securities
+  - Stock Edge
+  - Ashika
+  - Tata Securities
+
+# Filename parsing patterns (tried in order)
+filename_patterns:
+  # Pattern: Broker_sees_X%_UPSIDE_in_Company_Description_ID.pdf
+  - name: "upside_pattern"
+    regex: "^(.+?)_sees_\\d+%_(?:UPSIDE|DOWNSIDE)_in_(.+?)_[A-Z][a-z].*?_(\\d+)\\.pdf$"
+    groups: {broker: 1, company: 2, report_id: 3}
+
+  # Pattern: Broker on Company.pdf
+  - name: "broker_on_company"
+    regex: "^(.+?)\\s+on\\s+(.+?)\\.pdf$"
+    groups: {broker: 1, company: 2}
+
+  # Pattern: Broker Initiating Coverage on Company.pdf
+  - name: "initiating_coverage"
+    regex: "^(.+?)\\s+(?:Initiating|initiating)\\s+(?:Coverage|coverage)\\s+on\\s+(.+?)\\.pdf$"
+    groups: {broker: 1, company: 2}
+
+  # Pattern: Broker sees good upside in Company.pdf
+  - name: "sees_upside_natural"
+    regex: "^(.+?)\\s+sees\\s+.*?(?:upside|downside)\\s+in\\s+(.+?)\\.pdf$"
+    groups: {broker: 1, company: 2}
+
+  # Pattern: Company - IC - Date - Broker.pdf
+  - name: "company_ic_broker"
+    regex: "^(.+?)\\s+-\\s+IC\\s+-\\s+[\\d-]+\\s+-\\s+(.+?)\\.pdf$"
+    groups: {company: 1, broker: 2}
+
+  # Pattern: Broker_Company_Details.pdf (underscore separated, broker known)
+  - name: "underscore_broker_company"
+    regex: "^(.+?)_(?:on_|sees_|initiates_|Initiating_|IPO_Note_on_)(.+?)(?:_\\d+)?\\.pdf$"
+    groups: {broker: 1, company: 2}
+
+# Mapping pipeline levels
+pipeline:
+  # Level 1: Filename-only (free, instant)
+  level1:
+    enabled: true
+    confidence_threshold: 0.75  # min fuzzy match score to accept
+
+  # Level 2: PDF first-page scan with Ollama (local, fast)
+  level2:
+    enabled: true
+    ollama_model: "qwen2.5:14b"
+    ollama_url: "http://localhost:11434"
+    max_pages: 2  # read first N pages
+    timeout: 120
+    confidence_threshold: 0.70
+
+  # Level 3: Claude CLI (expensive, accurate)
+  level3:
+    enabled: true
+    timeout: 300
+    # Only used when level1 + level2 fail
+    batch_size: 10  # process N reports per Claude call
+
+# Fuzzy matching settings
+matching:
+  min_score: 70          # minimum fuzzy match score (0-100)
+  exact_bonus: 30        # bonus for exact ticker/code match
+  sector_validation: true # cross-check sector if available
+  max_candidates: 5       # return top N candidates per report
+
+# Report classification
+report_types:
+  - company_specific     # about a single company
+  - sector_report        # about a sector/industry
+  - market_overview      # broad market commentary
+  - earnings_preview     # quarterly earnings preview (may be multi-company)
+  - thematic             # thematic research (e.g., EV, AI, etc.)
+  - daily_update         # daily broker note
+  - ipo_note             # IPO analysis
+  - book                 # educational/book content
+  - unknown              # could not classify

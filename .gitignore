@@ -1,0 +1,22 @@
+# Sensitive / auth
+config.ini
+*.session
+*.session-journal
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Data / output
+progress.json
+file_hashes.json
+research_mapper/output/
+
+# Claude
+.claude/
+
+# OS
+Thumbs.db
+Desktop.ini
